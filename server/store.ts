@@ -458,8 +458,9 @@ export async function createDemoOrder(userId: number | null, details: CheckoutAd
       const tax = 0;
       for (const item of snapshot) {
         const [updated] = await tx.update(productVariants).set({ stock: sql`${productVariants.stock} - ${item.quantity}` })
-          .where(and(eq(productVariants.id, item.variantId), gte(productVariants.stock, item.quantity)));
-        if (updated.affectedRows !== 1) throw new Error("Inventory changed while preparing the order");
+          .where(and(eq(productVariants.id, item.variantId), gte(productVariants.stock, item.quantity)))
+          .returning({ id: productVariants.id });
+        if (!updated) throw new Error("Inventory changed while preparing the order");
       }
       if (normalizedCoupon) await tx.update(coupons).set({ usedCount: sql`${coupons.usedCount} + 1` }).where(eq(coupons.code, normalizedCoupon));
       await tx.insert(orders).values({ id, orderNumber, idempotencyKey, userId, customerName: details.customerName.trim(), email: details.email.trim().toLowerCase(), phone: details.phone.trim(),
