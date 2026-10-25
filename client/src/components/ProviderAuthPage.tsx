@@ -48,7 +48,7 @@ export default function ProviderAuthPage({ path }: { path: string }) {
   const isLogout = path === "/logout";
   const content = pageContent[path] ?? pageContent["/login"]!;
   const pageTitle = isLogout ? "Sign out" : content.title;
-  usePageMeta(`${pageTitle} | SPORTIKA`, "Secure SPORTIKA customer access through Manus. Passwords and recovery remain provider-managed.", true);
+  usePageMeta(`${pageTitle} | SPORTIKA`, "Secure SPORTIKA customer access through Manus. Passwords and recovery remain provider-managed.");
 
   const continueWithManus = () => {
     try {

@@ -14,7 +14,7 @@ import {
   getCatalogFacets, getOwnedOrder, getProduct, getProductsBySlugs, getStorefrontConfig, getUserWishlist, listAddresses, listCategories, listProducts,
   listUserOrders, readUserCart, requestReturn, saveSupportMessage, saveUserCart, setReturnRequestStatus,
   setSupportMessageStatus, subscribeNewsletter, toggleWishlist, updateStoreShipping, updateStorefrontConfig, updateUserDisplayName, quoteCart,
-  getStoreSettings, adminUpdateVariant, adminUpdateCoupon,
+  getStoreSettings, adminUpdateVariant, adminUpdateCoupon, adminUpdateTracking,
 } from "./store";
 
 const lineSchema = z.object({ variantId: z.number().int().positive(), quantity: z.number().int().min(1).max(25) });

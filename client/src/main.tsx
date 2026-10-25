@@ -10,6 +10,14 @@ import "./index.css";
 import "./commerce.css";
 import "./store.css";
 
+const localImageFallback = "/sportika-image-fallback.svg";
+document.addEventListener("error", event => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied === "true") return;
+  image.dataset.fallbackApplied = "true";
+  image.src = localImageFallback;
+}, true);
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">SPORTIKA demonstration image</title>
+  <desc id="desc">A branded placeholder used when a demonstration image is unavailable locally.</desc>
+  <rect width="1200" height="900" fill="#171717"/>
+  <path d="M0 700 380 450 620 610 820 360 1200 700V900H0Z" fill="#242424"/>
+  <path d="M0 760 300 570 520 710 790 500 1200 760V900H0Z" fill="#b8f500" opacity=".9"/>
+  <text x="72" y="120" fill="#b8f500" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="8">SPORTIKA / DEMO</text>
+  <text x="72" y="210" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800">BUILT TO MOVE.</text>
+  <text x="72" y="292" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800">MADE TO PERFORM.</text>
+  <text x="72" y="820" fill="#171717" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="3">IMAGE PENDING CONFIGURATION</text>
+</svg>
