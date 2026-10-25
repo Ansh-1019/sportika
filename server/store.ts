@@ -9,6 +9,10 @@ import { seedCategories, seedProducts, shippingRules } from "../shared/catalog";
 import { effectiveAvailability } from "../shared/catalog-filters";
 import type { CartLine, CheckoutAddress, OrderSummary, StoreCategory, StoreProduct } from "../shared/store-types";
 import { getDb } from "./db";
+import {
+  isLocalDemoPreview, localDemoCategories, localDemoFacets, localDemoListProducts, localDemoProduct,
+  localDemoProductsBySlugs, localDemoQuote, localDemoShipping, localDemoSitemapProducts, localDemoStorefront,
+} from "./local-demo-catalog";
 
 let seeded = false;
 let seedPromise: Promise<void> | undefined;
@@ -66,6 +70,7 @@ async function seedDemoData() {
 }
 
 async function readShippingRules() {
+  if (isLocalDemoPreview) return localDemoShipping();
   const db = await dbOrThrow();
   const [row] = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, "shipping_rules")).limit(1);
   if (!row) return shippingRules;
@@ -80,6 +85,7 @@ async function readShippingRules() {
 }
 
 export async function getStoreSettings() {
+  if (isLocalDemoPreview) return { shipping: localDemoShipping(), paymentMode: "demo" as const, taxConfigured: false, carrierConfigured: false, emailConfigured: false, bestSellingAvailable: false };
   const [shipping, db] = await Promise.all([readShippingRules(), dbOrThrow()]);
   const paidItems = await db.select({ productId: orderItems.productId }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id))
     .where(and(eq(orders.mode, "live"), eq(orders.paymentStatus, "paid"), sql`${orderItems.productId} IS NOT NULL`)).limit(1);
@@ -96,12 +102,14 @@ export async function updateStoreShipping(input: { flatRate: number; freeShippin
 }
 
 export async function listCategories(): Promise<StoreCategory[]> {
+  if (isLocalDemoPreview) return localDemoCategories();
   await ensureSeeded();
   const db = await dbOrThrow();
   return db.select({ id: categories.id, slug: categories.slug, name: categories.name, description: categories.description }).from(categories).orderBy(asc(categories.name));
 }
 
 export async function getCatalogFacets(collection?: string) {
+  if (isLocalDemoPreview) return localDemoFacets(collection);
   await ensureSeeded();
   const db = await dbOrThrow();
   const slug = collection?.toLowerCase();
@@ -164,6 +172,7 @@ async function hydrateProducts(rows: ProductRow[], includeInactiveVariants = fal
 }
 
 export async function listProducts(filters: ProductFilters = {}) {
+  if (isLocalDemoPreview) return localDemoListProducts(filters);
   await ensureSeeded();
   const db = await dbOrThrow();
   const conditions: SQL[] = [eq(products.active, true)];
@@ -242,6 +251,7 @@ export async function listProducts(filters: ProductFilters = {}) {
 }
 
 export async function getProduct(slug: string) {
+  if (isLocalDemoPreview) return localDemoProduct(slug);
   await ensureSeeded();
   const db = await dbOrThrow();
   const [row] = await db.select({
@@ -257,6 +267,7 @@ export async function getProduct(slug: string) {
 export async function getProductsBySlugs(slugs: string[]) {
   const requested = [...new Set(slugs)].slice(0, 100);
   if (!requested.length) return [];
+  if (isLocalDemoPreview) return localDemoProductsBySlugs(requested);
   await ensureSeeded();
   const db = await dbOrThrow();
   const rows = await db.select({
@@ -272,6 +283,7 @@ export async function getProductsBySlugs(slugs: string[]) {
 }
 
 export async function listSitemapProducts() {
+  if (isLocalDemoPreview) return localDemoSitemapProducts();
   await ensureSeeded();
   const db = await dbOrThrow();
   return db.select({ slug: products.slug }).from(products)
@@ -386,6 +398,7 @@ async function calculateCoupon(executor: any, couponCode: string | undefined, su
 }
 
 export async function quoteCart(lines: CartLine[], couponCode?: string) {
+  if (isLocalDemoPreview) return localDemoQuote(lines, couponCode);
   await ensureSeeded();
   const db = await dbOrThrow();
   const { snapshot, subtotal } = await validateCartLines(db, normalizeCartLines(lines));
@@ -732,6 +745,7 @@ const defaultStorefrontConfig = {
   featuredProductIds: [] as number[],
 };
 export async function getStorefrontConfig() {
+  if (isLocalDemoPreview) return localDemoStorefront();
   const db = await dbOrThrow();
   const [row] = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, "storefront_config")).limit(1);
   if (!row) return defaultStorefrontConfig;
