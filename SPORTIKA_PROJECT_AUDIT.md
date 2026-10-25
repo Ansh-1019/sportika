@@ -48,3 +48,45 @@ Additional files from this phase:
 - `drizzle/0005_youthful_ultimates.sql`
 - `drizzle/meta/0005_snapshot.json`
 - Updated `server/_core/sdk.ts`, `server/_core/oauth.ts`, `server/db.ts`, `server/routers.ts`, `drizzle/schema.ts`, `server/store.ts`, and `client/src/pages/Collection.tsx`.
+
+## 16. Visual portability and backend integrity phase
+
+### Portable storefront media completed
+
+- Replaced all remaining storefront and demo-catalog `/manus-storage/async-images/...` references with six optimized local WebP assets under `client/public/assets/sportika/`.
+- Added an original wide hero campaign image with a dark left text-safe area and athletes on the right, plus dedicated portrait visuals for training tees, jerseys, running/track, women’s training, and footwear/accessories.
+- Added ten homepage collection cards covering the requested product and audience groupings: Sports T-shirts, Jerseys, Training Wear, Shorts & Track Pants, Leggings & Bras, Hoodies & Tracksuits, Sports Shoes, Accessories, Men, and Women.
+- Updated sports-discipline cards and supporting footwear/accessories panels to use relevant local imagery and descriptive alt text.
+- Existing seeded demo products are refreshed to local assets only when the database record is marked `isDemo`; non-demo or user-managed product records are not overwritten.
+
+### Backend integrity hardening completed
+
+- Checkout now verifies that every conditional stock decrement affects exactly one row; otherwise the transaction fails and rolls back before creating an order or payment record.
+- Added database-backed checkout tests for insufficient stock preservation, concurrent finite-stock consumption, and idempotent duplicate submission behavior.
+- Public tRPC error mapping now replaces database, SQL, schema, constraint, connection, and deadlock details with a generic retry message while preserving deliberate business-validation messages.
+- Added additive indexes for `(productId, position)` image ordering and `(productId, active, stock)` inventory lookup patterns.
+- Applied migration `drizzle/0006_stormy_apocalypse.sql` to the existing local database without reset or data deletion.
+
+### Verification
+
+- `pnpm check`: passed.
+- `pnpm test`: passed, 6 test files and 19 tests; database checkout integration tests are skipped without `DATABASE_URL`.
+- Database-backed `server/checkout-integrity.test.ts`: passed, 2 tests.
+- `pnpm build`: passed; existing Vite warning about the platform config script and chunk-size advisory remain non-blocking.
+- Local development health: `{"status":"ok"}`.
+- Direct routes `/`, `/collections/sale`, `/products/apex-dry-training-tee`, `/login`, and `/admin`: HTTP 200.
+- All six local WebP assets: HTTP 200.
+- Catalog API: 18 seeded demo products returned, all with local `/assets/sportika/` image URLs.
+- Live preview verified for the homepage hero/collection layout and the Apex Dry Training Tee detail page.
+
+Additional files from this phase:
+
+- `client/public/assets/sportika/hero-campaign.webp`
+- `client/public/assets/sportika/tee-training.webp`
+- `client/public/assets/sportika/jersey.webp`
+- `client/public/assets/sportika/shorts-track.webp`
+- `client/public/assets/sportika/womens-training.webp`
+- `client/public/assets/sportika/footwear-accessories.webp`
+- `server/checkout-integrity.test.ts`
+- `drizzle/0006_stormy_apocalypse.sql`
+- Updated `client/src/pages/Home.tsx`, `shared/catalog.ts`, `server/store.ts`, `server/routers.ts`, and `drizzle/schema.ts`.

@@ -50,7 +50,7 @@ export const productImages = mysqlTable("product_images", {
   alt: varchar("alt", { length: 300 }).notNull(),
   position: int("position").notNull().default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, table => ({ productIndex: index("product_images_product_idx").on(table.productId) }));
+}, table => ({ productIndex: index("product_images_product_idx").on(table.productId), productPositionIndex: index("product_images_product_position_idx").on(table.productId, table.position) }));
 
 export const productVariants = mysqlTable("product_variants", {
   id: int("id").autoincrement().primaryKey(),
@@ -64,7 +64,7 @@ export const productVariants = mysqlTable("product_variants", {
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, table => ({ productIndex: index("variants_product_idx").on(table.productId), lookupIndex: index("variants_lookup_idx").on(table.size, table.color, table.active) }));
+}, table => ({ productIndex: index("variants_product_idx").on(table.productId), lookupIndex: index("variants_lookup_idx").on(table.size, table.color, table.active), inventoryIndex: index("variants_inventory_idx").on(table.productId, table.active, table.stock) }));
 
 export const carts = mysqlTable("carts", {
   id: int("id").autoincrement().primaryKey(),

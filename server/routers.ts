@@ -42,7 +42,14 @@ const catalogListInput = z.object({
   const error = priceRangeError(input.minPrice, input.maxPrice);
   if (error) ctx.addIssue({ code: "custom", path: ["maxPrice"], message: error });
 });
-const clientError = (error: unknown): never => { throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Request could not be completed" }); };
+const clientError = (error: unknown): never => {
+  if (error instanceof TRPCError) throw error;
+  const message = error instanceof Error ? error.message : "";
+  const safeMessage = /database|query|sql|column|table|constraint|duplicate entry|syntax|connection|foreign key|deadlock/i.test(message)
+    ? "Request could not be completed right now. Please try again."
+    : message || "Request could not be completed";
+  throw new TRPCError({ code: "BAD_REQUEST", message: safeMessage });
+};
 const enforceRateLimit = (result: { allowed: boolean; retryAfterSeconds: number }, res: { setHeader: (name: string, value: string) => void }, message: string) => {
   if (result.allowed) return;
   res.setHeader("Retry-After", String(result.retryAfterSeconds));

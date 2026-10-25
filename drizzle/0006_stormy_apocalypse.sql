@@ -1,0 +1,2 @@
+CREATE INDEX `product_images_product_position_idx` ON `product_images` (`productId`,`position`);--> statement-breakpoint
+CREATE INDEX `variants_inventory_idx` ON `product_variants` (`productId`,`active`,`stock`);

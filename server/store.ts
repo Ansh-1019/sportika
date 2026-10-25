@@ -37,8 +37,13 @@ async function seedDemoData() {
     if (created) categoryMap.set(category.slug, created.id);
   }
   for (const item of seedProducts) {
-    const [existing] = await db.select({ id: products.id }).from(products).where(eq(products.slug, item.slug)).limit(1);
-    if (existing) continue;
+    const [existing] = await db.select({ id: products.id, isDemo: products.isDemo }).from(products).where(eq(products.slug, item.slug)).limit(1);
+    if (existing) {
+      if (existing.isDemo && item.image.startsWith("/assets/sportika/")) {
+        await db.update(productImages).set({ url: item.image, alt: item.imageAlt }).where(and(eq(productImages.productId, existing.id), eq(productImages.position, 0)));
+      }
+      continue;
+    }
     const categoryId = categoryMap.get(item.category);
     if (!categoryId) continue;
     await db.insert(products).values({
@@ -439,8 +444,9 @@ export async function createDemoOrder(userId: number | null, details: CheckoutAd
       const shipping = subtotal - discount >= configuredShipping.freeShippingThreshold ? 0 : configuredShipping.flatRate;
       const tax = 0;
       for (const item of snapshot) {
-        await tx.update(productVariants).set({ stock: sql`${productVariants.stock} - ${item.quantity}` })
+        const [updated] = await tx.update(productVariants).set({ stock: sql`${productVariants.stock} - ${item.quantity}` })
           .where(and(eq(productVariants.id, item.variantId), gte(productVariants.stock, item.quantity)));
+        if (updated.affectedRows !== 1) throw new Error("Inventory changed while preparing the order");
       }
       if (normalizedCoupon) await tx.update(coupons).set({ usedCount: sql`${coupons.usedCount} + 1` }).where(eq(coupons.code, normalizedCoupon));
       await tx.insert(orders).values({ id, orderNumber, idempotencyKey, userId, customerName: details.customerName.trim(), email: details.email.trim().toLowerCase(), phone: details.phone.trim(),
