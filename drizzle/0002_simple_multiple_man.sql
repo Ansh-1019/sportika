@@ -1,0 +1,1 @@
+ALTER TABLE `products` ADD `archived` boolean DEFAULT false NOT NULL;
