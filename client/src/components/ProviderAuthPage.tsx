@@ -6,6 +6,7 @@ import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useStore } from "@/lib/store";
 import { usePageMeta } from "@/lib/seo";
+import { localAuthValidationError } from "@shared/auth-validation";
 
 const pageContent: Record<string, { title: string; eyebrow: string; description: string; action: string }> = {
   "/login": { title: "Sign in to SPORTIKA", eyebrow: "CUSTOMER ACCOUNT", description: "Use your SPORTIKA email and password to access your account.", action: "Sign in" },
@@ -24,6 +25,7 @@ export default function ProviderAuthPage({ path }: { path: string }) {
   const utils = trpc.useUtils();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [validationError, setValidationError] = useState("");
   const [manusConfigured] = useState(providerIsConfigured);
   const logout = trpc.auth.logout.useMutation({
     onSuccess: async () => { await utils.auth.me.invalidate(); toast.success("You are signed out of SPORTIKA."); setLocation("/"); },
@@ -52,13 +54,15 @@ export default function ProviderAuthPage({ path }: { path: string }) {
 
   const submitLocal = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setValidationError("");
     const data = new FormData(event.currentTarget);
     const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
+    const name = String(data.get("name") ?? "").trim();
+    const confirmation = String(data.get("passwordConfirmation") ?? "");
+    const error = localAuthValidationError({ name, email, password, passwordConfirmation: confirmation }, isSignup);
+    if (error) { setValidationError(error); return; }
     if (isSignup) {
-      const name = String(data.get("name") ?? "").trim();
-      const confirmation = String(data.get("passwordConfirmation") ?? "");
-      if (password !== confirmation) { toast.error("Passwords do not match."); return; }
       register.mutate({ name, email, password });
     } else {
       login.mutate({ email, password });
@@ -92,6 +96,7 @@ export default function ProviderAuthPage({ path }: { path: string }) {
         <label className="field"><span>Email address</span><input name="email" type="email" autoComplete="email" maxLength={320} required /></label>
         <label className="field"><span>Password</span><span className="password-field"><input name="password" type={showPassword ? "text" : "password"} autoComplete={isSignup ? "new-password" : "current-password"} minLength={8} maxLength={128} required /><button type="button" className="password-toggle" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={17}/> : <Eye size={17}/>}</button></span></label>
         {isSignup && <label className="field"><span>Confirm password</span><span className="password-field"><input name="passwordConfirmation" type={showConfirmation ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} required /><button type="button" className="password-toggle" aria-label={showConfirmation ? "Hide password confirmation" : "Show password confirmation"} onClick={() => setShowConfirmation(value => !value)}>{showConfirmation ? <EyeOff size={17}/> : <Eye size={17}/>}</button></span></label>}
+        {validationError && <p className="error-text" role="alert">{validationError}</p>}
         <button className="btn-dark" type="submit" disabled={busy}>{busy ? "Please wait…" : content.action} <ArrowRight size={16}/></button>
       </form>
       <div className="provider-auth-links">{isSignup ? <><Link href="/login">Already have an account? Sign in</Link><Link href="/forgot-password">Forgot password?</Link></> : <><Link href="/signup">Create an account</Link><Link href="/forgot-password">Forgot password?</Link></>}</div>
