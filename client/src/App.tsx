@@ -6,6 +6,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { StoreProvider } from "./lib/store";
+import ProviderAuthPage from "./components/ProviderAuthPage";
 const Home = lazy(() => import("./pages/Home"));
 const CollectionPage = lazy(() => import("./pages/Collection"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetail"));
@@ -14,6 +15,12 @@ const CheckoutPage = lazy(() => import("./pages/Checkout"));
 const InfoPage = lazy(() => import("./pages/Info"));
 const AdminPage = lazy(() => import("./pages/Admin"));
 import { StoreShell } from "./components/StoreShell";
+
+const LoginPage = () => <ProviderAuthPage path="/login" />;
+const SignupPage = () => <ProviderAuthPage path="/signup" />;
+const ForgotPasswordPage = () => <ProviderAuthPage path="/forgot-password" />;
+const ResetPasswordPage = () => <ProviderAuthPage path="/reset-password" />;
+const LogoutPage = () => <ProviderAuthPage path="/logout" />;
 
 function Router() {
   return (
@@ -28,6 +35,11 @@ function Router() {
           <Route path="/search" component={CollectionPage} />
           <Route path="/cart" component={CartPage} />
           <Route path="/checkout" component={CheckoutPage} />
+          <Route path="/login" component={LoginPage} />
+          <Route path="/signup" component={SignupPage} />
+          <Route path="/forgot-password" component={ForgotPasswordPage} />
+          <Route path="/reset-password" component={ResetPasswordPage} />
+          <Route path="/logout" component={LogoutPage} />
           <Route path="/order-confirmation/:orderId" component={InfoPage} />
           <Route path="/account" component={InfoPage} />
           <Route path="/account/:section" component={InfoPage} />

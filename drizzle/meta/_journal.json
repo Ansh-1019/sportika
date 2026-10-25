@@ -29,6 +29,20 @@
       "when": 1792863336327,
       "tag": "0003_supreme_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1792931255890,
+      "tag": "0004_yellow_caretaker",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1792931839471,
+      "tag": "0005_youthful_ultimates",
+      "breakpoints": true
     }
   ]
 }

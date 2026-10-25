@@ -6,6 +6,7 @@ import {
   returnRequests, supportMessages, users, wishlistItems,
 } from "../drizzle/schema";
 import { seedCategories, seedProducts, shippingRules } from "../shared/catalog";
+import { effectiveAvailability } from "../shared/catalog-filters";
 import type { CartLine, CheckoutAddress, OrderSummary, StoreCategory, StoreProduct } from "../shared/store-types";
 import { getDb } from "./db";
 
@@ -169,7 +170,7 @@ export async function listProducts(filters: ProductFilters = {}) {
   }
   else if (collection === "new-arrivals") conditions.push(eq(products.newArrival, true));
   else if (collection === "sale") {
-    conditions.push(sql`${products.originalPrice} IS NOT NULL`);
+    conditions.push(sql`${products.originalPrice} IS NOT NULL AND ${products.originalPrice} > ${products.price}`);
     conditions.push(sql`EXISTS (SELECT 1 FROM ${productVariants} WHERE ${productVariants.productId} = ${products.id} AND ${productVariants.active} = true AND ${productVariants.stock} > 0)`);
   }
   else if (collection === "shoes" || collection === "accessories") conditions.push(eq(categories.slug, collection));
@@ -178,12 +179,12 @@ export async function listProducts(filters: ProductFilters = {}) {
   if (filters.gender) conditions.push(eq(products.gender, filters.gender));
   if (filters.sport) conditions.push(eq(products.sport, filters.sport));
   if (filters.productType) conditions.push(eq(products.productType, filters.productType));
-  const effectiveAvailability = collection === "sale" ? true : filters.available;
+  const effectiveAvailabilityForQuery = effectiveAvailability(collection, filters.available);
   const priceVariantConditions: SQL[] = [eq(productVariants.productId, products.id), eq(productVariants.active, true)];
   if (filters.size) priceVariantConditions.push(eq(productVariants.size, filters.size));
   if (filters.color) priceVariantConditions.push(eq(productVariants.color, filters.color));
-  if (effectiveAvailability === true) priceVariantConditions.push(gte(productVariants.stock, 1));
-  if (effectiveAvailability === false) priceVariantConditions.push(eq(productVariants.stock, 0));
+  if (effectiveAvailabilityForQuery === true) priceVariantConditions.push(gte(productVariants.stock, 1));
+  if (effectiveAvailabilityForQuery === false) priceVariantConditions.push(eq(productVariants.stock, 0));
   const priceVariantWhere = and(...priceVariantConditions)!;
   const effectivePrice = sql<number>`COALESCE((SELECT MIN(COALESCE(${productVariants.price}, ${products.price})) FROM ${productVariants} WHERE ${priceVariantWhere}), ${products.price})`;
   if (filters.minPrice !== undefined) conditions.push(gte(effectivePrice, filters.minPrice));
@@ -209,12 +210,12 @@ export async function listProducts(filters: ProductFilters = {}) {
     originalPrice: products.originalPrice, featured: products.featured, newArrival: products.newArrival,
     active: products.active, archived: products.archived, isDemo: products.isDemo, createdAt: products.createdAt,
   }).from(products).innerJoin(categories, eq(products.categoryId, categories.id)).where(and(...conditions)).orderBy(...orderBy);
-  if (filters.size || filters.color || effectiveAvailability !== undefined) {
+  if (filters.size || filters.color || effectiveAvailabilityForQuery !== undefined) {
     const variantConditions: SQL[] = [eq(productVariants.active, true)];
     if (filters.size) variantConditions.push(eq(productVariants.size, filters.size));
     if (filters.color) variantConditions.push(eq(productVariants.color, filters.color));
-    if (effectiveAvailability === true) variantConditions.push(gte(productVariants.stock, 1));
-    if (effectiveAvailability === false) variantConditions.push(eq(productVariants.stock, 0));
+    if (effectiveAvailabilityForQuery === true) variantConditions.push(gte(productVariants.stock, 1));
+    if (effectiveAvailabilityForQuery === false) variantConditions.push(eq(productVariants.stock, 0));
     const matches = await db.select({ productId: productVariants.productId }).from(productVariants).where(and(...variantConditions));
     const ids = new Set(matches.map(item => item.productId));
     rows = rows.filter(row => ids.has(row.id));

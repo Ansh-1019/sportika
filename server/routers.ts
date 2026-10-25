@@ -1,11 +1,16 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { TRPCError } from "@trpc/server";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { priceRangeError } from "../shared/catalog-filters";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { ENV } from "./_core/env";
+import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import * as db from "./db";
+import { hashPassword, LOCAL_PASSWORD_MAX_LENGTH, LOCAL_PASSWORD_MIN_LENGTH, normalizeEmail, verifyPassword } from "./local-auth";
+import { loginIdentityLimiter, loginIpLimiter, registrationIdentityLimiter, registrationIpLimiter, requestAddress } from "./rate-limit";
 import { storagePut } from "./storage";
 import {
   addAddress, adminCreateCategory, adminCreateCoupon, adminCreateProduct, adminCustomers, adminListCoupons,
@@ -18,6 +23,11 @@ import {
 } from "./store";
 
 const lineSchema = z.object({ variantId: z.number().int().positive(), quantity: z.number().int().min(1).max(25) });
+const localAuthInput = z.object({
+  email: z.string().trim().email().max(320),
+  password: z.string().min(LOCAL_PASSWORD_MIN_LENGTH).max(LOCAL_PASSWORD_MAX_LENGTH),
+});
+const registrationInput = localAuthInput.extend({ name: z.string().trim().min(2).max(80) });
 const addressSchema = z.object({
   customerName: z.string().trim().min(2).max(180), email: z.string().trim().email().max(320),
   phone: z.string().trim().regex(/^[+0-9 ()-]{8,24}$/), addressLine1: z.string().trim().min(5).max(240),
@@ -33,12 +43,45 @@ const catalogListInput = z.object({
   if (error) ctx.addIssue({ code: "custom", path: ["maxPrice"], message: error });
 });
 const clientError = (error: unknown): never => { throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Request could not be completed" }); };
+const enforceRateLimit = (result: { allowed: boolean; retryAfterSeconds: number }, res: { setHeader: (name: string, value: string) => void }, message: string) => {
+  if (result.allowed) return;
+  res.setHeader("Retry-After", String(result.retryAfterSeconds));
+  throw new TRPCError({ code: "TOO_MANY_REQUESTS", message });
+};
 
 export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => { const cookieOptions=getSessionCookieOptions(ctx.req);ctx.res.clearCookie(COOKIE_NAME,{...cookieOptions,maxAge:-1});return {success:true} as const; }),
+    register: publicProcedure.input(registrationInput).mutation(async ({ ctx, input }) => {
+      if (!ENV.appId || !ENV.cookieSecret) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Local customer authentication is not configured." });
+      const email = normalizeEmail(input.email);
+      const address = requestAddress(ctx.req);
+      enforceRateLimit(registrationIpLimiter.consume(address), ctx.res, "Too many registration attempts. Please try again later.");
+      enforceRateLimit(registrationIdentityLimiter.consume(email), ctx.res, "Too many registration attempts for this email. Please try again later.");
+      if (await db.getUserByEmail(email)) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+      const openId = `local_${randomBytes(24).toString("hex")}`;
+      const user = await db.createLocalUser({ openId, name: input.name.trim(), email, passwordHash: await hashPassword(input.password) });
+      if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The account could not be created." });
+      const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", sessionVersion: user.sessionVersion, expiresInMs: ONE_YEAR_MS });
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...getSessionCookieOptions(ctx.req), maxAge: ONE_YEAR_MS });
+      return { success: true } as const;
+    }),
+    login: publicProcedure.input(localAuthInput).mutation(async ({ ctx, input }) => {
+      if (!ENV.appId || !ENV.cookieSecret) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Local customer authentication is not configured." });
+      const email = normalizeEmail(input.email);
+      const address = requestAddress(ctx.req);
+      enforceRateLimit(loginIpLimiter.consume(address), ctx.res, "Too many login attempts. Please try again later.");
+      enforceRateLimit(loginIdentityLimiter.consume(email), ctx.res, "Too many login attempts for this account. Please try again later.");
+      const user = await db.getUserByEmail(email);
+      if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) throw new TRPCError({ code: "UNAUTHORIZED", message: "Email or password is incorrect." });
+      await db.upsertUser({ openId: user.openId, lastSignedIn: new Date() });
+      loginIdentityLimiter.clear(email);
+      const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", sessionVersion: user.sessionVersion, expiresInMs: ONE_YEAR_MS });
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...getSessionCookieOptions(ctx.req), maxAge: ONE_YEAR_MS });
+      return { success: true } as const;
+    }),
+    logout: publicProcedure.mutation(async ({ ctx }) => { if (ctx.user) await db.bumpSessionVersion(ctx.user.id); const cookieOptions=getSessionCookieOptions(ctx.req);ctx.res.clearCookie(COOKIE_NAME,{...cookieOptions,maxAge:-1});return {success:true} as const; }),
   }),
   catalog: router({
     categories: publicProcedure.query(() => listCategories()),

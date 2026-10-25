@@ -321,6 +321,14 @@ button:disabled, .btn-primary:disabled, .btn-dark:disabled, .btn-outline:disable
 .field { margin: 11px 0; display: grid; gap: 6px; color: #42453d; font-size: 10px; font-weight: 650; }
 .field input, .field select, .field textarea, .inline-form input, .inline-form select { width: 100%; min-width: 0; min-height: 42px; padding: 10px 11px; border: 1px solid #d6d8ce; border-radius: 0; background: #fff; color: var(--ink); font-size: 11px; }
 .field textarea { min-height: 100px; resize: vertical; }
+.auth-form { max-width: 480px; margin-top: 16px; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 42px; }
+.password-toggle { position: absolute; top: 0; right: 0; width: 42px; height: 42px; display: grid; place-items: center; border: 0; background: transparent; color: var(--gray); cursor: pointer; }
+.password-toggle:hover, .password-toggle:focus-visible { color: var(--ink); }
+.auth-form .btn-dark { margin-top: 7px; display: inline-flex; align-items: center; gap: 8px; }
+.provider-auth-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 10px; }
+.provider-auth-links a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .delivery-card { margin: 16px 0; padding: 16px; background: #eff1e7; }
 .delivery-card p { color: #686b61; font-size: 11px; line-height: 1.6; }
 .checkout-actions { margin-top: 18px; display: flex; justify-content: space-between; gap: 9px; }

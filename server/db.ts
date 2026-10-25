@@ -93,4 +93,36 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createLocalUser(input: {
+  openId: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.insert(users).values({
+    openId: input.openId,
+    name: input.name,
+    email: input.email,
+    passwordHash: input.passwordHash,
+    loginMethod: "password",
+    lastSignedIn: new Date(),
+  });
+  return getUserByOpenId(input.openId);
+}
+
+export async function bumpSessionVersion(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ sessionVersion: sql`${users.sessionVersion} + 1` }).where(eq(users.id, userId));
+}
+
 // TODO: add feature queries here as your schema grows.

@@ -24,3 +24,13 @@ export function safeInternalReturnTo(value: unknown): string {
     return "/";
   }
 }
+
+export type SaleVariant = { active: boolean; stock: number };
+
+export function isSaleEligible(product: { price: number; originalPrice: number | null }, variants: SaleVariant[]): boolean {
+  return product.originalPrice !== null && product.originalPrice > product.price && variants.some(variant => variant.active && variant.stock > 0);
+}
+
+export function effectiveAvailability(collection: string | undefined, requested: boolean | undefined): boolean | undefined {
+  return collection?.toLowerCase() === "sale" ? true : requested;
+}

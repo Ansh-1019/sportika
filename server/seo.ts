@@ -32,7 +32,8 @@ const COLLECTION_DESCRIPTIONS: Record<string, string> = {
   sale: "Browse configured sample catalog prices; offers are not commercial promises until confirmed by the business.",
 };
 const INFO_PATHS = new Set(Object.keys(STATIC_META));
-const DYNAMIC_PRIVATE = /^\/(?:account|admin)(?:\/|$)|^\/order-confirmation(?:\/|$)/;
+const AUTH_PATH = /^\/(?:login|signup|forgot-password|reset-password|logout)(?:\/|$)/;
+const DYNAMIC_PRIVATE = /^\/(?:account|admin)(?:\/|$)|^\/order-confirmation(?:\/|$)|^\/(?:login|signup|forgot-password|reset-password|logout)(?:\/|$)/;
 const ESCAPE = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 const formatINR = (amount: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
 const origin = () => { try { const parsed = new URL(process.env.PUBLIC_ORIGIN ?? ""); return parsed.protocol === "https:" && !parsed.username && !parsed.password ? parsed.origin : ""; } catch { return ""; } };
@@ -117,9 +118,10 @@ export async function getSeoPage(requestUrl: string): Promise<SeoPage> {
   }
   if (DYNAMIC_PRIVATE.test(pathname)) {
     const confirmation = pathname.startsWith("/order-confirmation/");
-    return { status: 200, title: confirmation ? "Order Confirmation | SPORTIKA" : pathname.startsWith("/admin") ? "Store Administration | SPORTIKA" : "My Account | SPORTIKA",
-      description: "Private SPORTIKA account or administration page. Personal information is rendered only after application authorization.", noindex: true,
-      body: `<h1>${confirmation ? "Order confirmation" : pathname.startsWith("/admin") ? "Store administration" : "Your SPORTIKA account"}</h1><p>${confirmation ? "Order information is not embedded in public HTML. Open the account session used to create the demonstration order." : "Sign in through the configured account provider to view private account or authorized administration information."}</p><p><a href="/">SPORTIKA home</a></p>` };
+    const auth = AUTH_PATH.test(pathname);
+    return { status: 200, title: auth ? "Customer Access | SPORTIKA" : confirmation ? "Order Confirmation | SPORTIKA" : pathname.startsWith("/admin") ? "Store Administration | SPORTIKA" : "My Account | SPORTIKA",
+      description: auth ? "Secure SPORTIKA customer access through the configured account provider." : "Private SPORTIKA account or administration page. Personal information is rendered only after application authorization.", noindex: true,
+      body: `<h1>${auth ? "Customer access" : confirmation ? "Order confirmation" : pathname.startsWith("/admin") ? "Store administration" : "Your SPORTIKA account"}</h1><p>${auth ? "Continue through the configured account provider to sign in, create an account or manage password recovery. Credentials remain provider-managed." : confirmation ? "Order information is not embedded in public HTML. Open the account session used to create the demonstration order." : "Sign in through the configured account provider to view private account or authorized administration information."}</p><p><a href="/">SPORTIKA home</a></p>` };
   }
   return { status: 404, title: "Page Not Found | SPORTIKA", description: "The requested SPORTIKA page could not be found.", noindex: true,
     body: `<h1>Page not found</h1><p>The requested page is not part of the SPORTIKA store.</p>${publicLinks()}` };
