@@ -41,6 +41,7 @@ function Router() {
           <Route path="/reset-password" component={ResetPasswordPage} />
           <Route path="/logout" component={LogoutPage} />
           <Route path="/order-confirmation/:orderId" component={InfoPage} />
+          <Route path="/account/orders/:id" component={InfoPage} />
           <Route path="/account" component={InfoPage} />
           <Route path="/account/:section" component={InfoPage} />
           <Route path="/admin" component={AdminPage} />
